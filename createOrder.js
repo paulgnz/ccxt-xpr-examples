@@ -1,6 +1,3 @@
-// replace PVT_K1_ with your private key
-// replace trading.paul with your XPR account 
-
 const ccxt = require('ccxt-xpr');
 
 async function placeLimitBuyOrder() {
@@ -11,17 +8,14 @@ async function placeLimitBuyOrder() {
   });
 
   const symbol = 'XPR_XMD'; // Replace with the trading pair symbol you want to trade
-  const amount = 1100; // Replace with the amount you want to buy
+  const amount = 1; // Replace with the amount you want to buy or sell (in XMD / Dollars)
   const price = 0.000916; // Replace with the price at which you want to place the order
 
   try {
     // Load markets and fetch the symbol info
     await exchange.loadMarkets();
-    const symbolInfo = exchange.markets[symbol];
 
-    // Place a limit buy order (after symbol, is the order type, then order side)
-    // LIMIT = 1, STOPLOSS = 2, TAKEPROFIT = 3
-    // BUY = 1, SELL = 2
+    // Place a limit buy order
     const order = await exchange.createOrder(symbol, 1, 1, amount, price, {
       'account': 'trading.paul',
       'filltype': 0,
