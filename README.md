@@ -14,9 +14,9 @@ Before running the scripts, you need to install the CCXT-XPR library. If you don
 
 After you have Node.js and npm installed, you can install the CCXT-XPR library by running the following command in your terminal:
 
-\`\`\`shell
+```shell
 npm install ccxt-xpr
-\`\`\`
+```
 
 ## Running the Scripts
 
@@ -24,9 +24,9 @@ To run the scripts, you will need to replace placeholder values in the scripts w
 
 After replacing the placeholder values, you can run a script by navigating to the directory containing the script in your terminal and running the following command:
 
-\`\`\`shell
+```shell
 node createOrder.js
-\`\`\`
+```
 
 Replace createOrder.js with the name of the script you want to run.
 
