@@ -32,12 +32,11 @@ Replace createOrder.js with the name of the script you want to run.
 
 ## Errors and Troubleshooting
 
-If you run into any issues while running the scripts, make sure you have the latest version of the CCXT-XPR library installed. You can update CCXT-XPR by running
+If you run into any issues while running the scripts, make sure you have the latest version of the CCXT-XPR library installed. You can update CCXT-XPR by running this command in your terminal:
 
 ```shell
 npm update ccxt-xpr
 ```
-in your terminal.
 
 Also, remember that not all exchanges support all features, so make sure to check the specific exchange's documentation for any exchange-specific details.
 
