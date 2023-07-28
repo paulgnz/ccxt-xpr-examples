@@ -5,16 +5,16 @@ const fs = require('fs');
 let rawdata = fs.readFileSync('protondex_precision.json');
 let markets = JSON.parse(rawdata);
 
-// const symbolProtonDEX = 'XPR_XMD';
-// const symbolKucoin = 'XPR/USDT';
+const symbolProtonDEX = 'XPR_XMD';
+const symbolKucoin = 'XPR/USDT';
 
-const symbolProtonDEX = 'XDOGE_XMD';
-const symbolKucoin = 'DOGE/USDT';
+// const symbolProtonDEX = 'XDOGE_XMD';
+// const symbolKucoin = 'DOGE/USDT';
 
 async function fetchPrices() {
   const exchangeProtonDEX = new ccxt.protondex({
     'secret': process.env.PROTONDEX_API_SECRET,
-    'verbose': true,
+    'verbose': false,
     'timeout': 60000,
   });
 
@@ -37,9 +37,8 @@ async function fetchPrices() {
     const marketProtonDEX = markets.markets.find(market => market.symbol === symbolProtonDEX);
     const marketKucoin = marketsKucoin.find(market => market.symbol === symbolKucoin);
     
-    const precisionProtonDEX = marketProtonDEX.bid_token.precision;
+    const precisionProtonDEX = marketProtonDEX.ask_token.precision;
     const precisionKucoin = marketKucoin.precision.price;
-    console.log('ProtonDEX Precision:', precisionProtonDEX);
 
     const protondexPrice = Number(protondexTicker.last.toFixed(precisionProtonDEX));
     const kucoinPrice = Number(kucoinTicker.bid);
