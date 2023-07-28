@@ -64,7 +64,7 @@ async function fetchPrices() {
         console.log('Arbitrage opportunity detected!');
         const minOrderValue = 5; // Minimum order value in USDT
         const maxPrice = Math.max(protondexPrice, kucoinPrice); // Use the higher price
-        const amount = minOrderValue / maxPrice; // Amount of XPR to buy or sell        
+        const amount = Number((minOrderValue / maxPrice).toFixed(precisionProtonDEX));
 
         // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
         // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
