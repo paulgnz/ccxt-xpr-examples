@@ -5,11 +5,11 @@ const fs = require('fs');
 let rawdata = fs.readFileSync('protondex_precision.json');
 let markets = JSON.parse(rawdata);
 
-const symbolProtonDEX = 'XDOGE_XMD';
-const symbolKucoin = 'DOGE/USDT';
-
 // const symbolProtonDEX = 'XPR_XMD';
 // const symbolKucoin = 'XPR/USDT';
+
+const symbolProtonDEX = 'XDOGE_XMD';
+const symbolKucoin = 'DOGE/USDT';
 
 async function fetchPrices() {
   const exchangeProtonDEX = new ccxt.protondex({
@@ -32,26 +32,18 @@ async function fetchPrices() {
       exchangeKucoin.fetchTicker(symbolKucoin),
     ]);
 
-    //console.log('ProtonDEX Ticker:', protondexTicker);
-    //console.log('Kucoin Ticker:', kucoinTicker);
-
     const marketsKucoin = await exchangeKucoin.fetchMarkets();
 
     const marketProtonDEX = markets.markets.find(market => market.symbol === symbolProtonDEX);
     const marketKucoin = marketsKucoin.find(market => market.symbol === symbolKucoin);
-
-    // console.log('marketProtonDEX:', marketProtonDEX);
-    // console.log('marketKucoin:', marketKucoin);
     
     const precisionProtonDEX = marketProtonDEX.bid_token.precision;
     const precisionKucoin = marketKucoin.precision.price;
+    console.log('ProtonDEX Precision:', precisionProtonDEX);
 
     const protondexPrice = Number(protondexTicker.last.toFixed(precisionProtonDEX));
     const kucoinPrice = Number(kucoinTicker.bid);
 
-    // console.log('MarketsProtonDEX:', marketsProtonDEX);
-    // console.log('MarketsKucoin:', marketsKucoin);
-    
     console.log('ProtonDEX Price:', protondexPrice);
     console.log('Kucoin Price:', kucoinPrice);
 
@@ -59,16 +51,15 @@ async function fetchPrices() {
       const spreadPercentage = Math.abs(((kucoinPrice - protondexPrice) / protondexPrice) * 100);
       console.log('Spread Percentage:', spreadPercentage.toFixed(2) + '%');
 
-      const arbitrageThreshold = 0.4;
+      const arbitrageThreshold = 1;
       if (spreadPercentage > arbitrageThreshold) {
         console.log('Arbitrage opportunity detected!');
-        const minOrderValue = 2; // Minimum order value in USDT
-        const amount = Number((minOrderValue / protondexPrice).toFixed(2));
-        const protonAmount = Number((minOrderValue).toFixed(2));
-        const kucoinAmount = Number((minOrderValue / kucoinPrice).toFixed(2));
+        const minOrderValue = 10; // Minimum order value in USDT
         const maxPrice = Math.max(protondexPrice, kucoinPrice); // Use the higher price
-        console.log('protonAmount:', `${protonAmount}`);
-        console.log(`kucoinAmount:`, `${kucoinAmount}`);
+        const amount = Number((minOrderValue / maxPrice).toFixed(4)); // Amount in base currency (XPR)
+        const buyAmount = minOrderValue; // Amount in quote currency (XMD or USDT) for a buy order
+        console.log('protonAmount:', `${buyAmount}`);
+        console.log(`kucoinAmount:`, `${amount}`);
         
         // Fetch balances
         const [balanceProtonDEX, balanceKucoin] = await Promise.all([
@@ -95,23 +86,17 @@ async function fetchPrices() {
             return;
         }
         
-        if (balanceProtonDEX.free[baseTokenProtonDEX] < amount || balanceKucoin.free[baseTokenKucoin] < amount ||
-            balanceProtonDEX.free[quoteTokenProtonDEX] < neededBalance || balanceKucoin.free[quoteTokenKucoin] < neededBalance) {
-            console.error('Insufficient balance!');
-            return;
-        }
-
         //
         // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
         if (kucoinPrice > protondexPrice) {
             try {
-                console.log(`Trying to buy ${amount} TOKEN on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
-                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, amount, protondexPrice, {
+                console.log(`Trying to buy TOKEN worth ${buyAmount} on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
+                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, buyAmount, protondexPrice, {
                     'account': process.env.PROTONDEX_ACCOUNT,
                     'filltype': 0,
                     'triggerprice': 0,
                 });
-                console.log(`${symbolProtonDEX} ${amount} ${protondexPrice}`);
+                console.log(`${symbolProtonDEX} ${buyAmount} ${protondexPrice}`);
 
                 console.log('ProtonDEX buy order placed:', orderProtonDEX);
             } catch (error) {
@@ -129,7 +114,7 @@ async function fetchPrices() {
         else {
             try {                               
                 const amount = Number((minOrderValue / maxPrice).toFixed(2));
-                console.log(`Trying to buy ${amount} TOKEN on Kucoin at price ${kucoinPrice} and sell on ProtonDEX at price ${protondexPrice}`);
+                console.log(`Trying to buy TOKEN worth ${buyAmount} on Kucoin at price ${kucoinPrice} and sell on ProtonDEX at price ${protondexPrice}`);
                 const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 2, amount, protondexPrice, {
                     'account': process.env.PROTONDEX_ACCOUNT,
                     'filltype': 0,
@@ -143,14 +128,12 @@ async function fetchPrices() {
             }
 
             try {
-                const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'buy', amount, kucoinPrice);
+                const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'buy', buyAmount, kucoinPrice);
                 console.log('Kucoin buy order placed:', orderKucoin);
             } catch (error) {
                 console.error('Error placing Kucoin order:', error);
             }
         }
-  
-        
       } else {
         console.log('No arbitrage opportunity at the moment.');
       }
