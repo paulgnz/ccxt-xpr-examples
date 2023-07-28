@@ -38,7 +38,7 @@ async function fetchPrices() {
       const spreadPercentage = Math.abs(((kucoinPrice - protondexPrice) / protondexPrice) * 100);
       console.log('Spread Percentage:', spreadPercentage.toFixed(2) + '%');
 
-      const arbitrageThreshold = 0.3;
+      const arbitrageThreshold = 0.5;
       if (spreadPercentage > arbitrageThreshold) {
         console.log('Arbitrage opportunity detected!');
         const minOrderValue = 2; // Minimum order value in USDT
@@ -49,8 +49,10 @@ async function fetchPrices() {
         // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
         if (kucoinPrice > protondexPrice) {
             try {
+                console.log('Amount:', Number(amount.toFixed(4)));
+                console.log('Price:', Number(protondexPrice.toFixed(6)));                
                 console.log(`Trying to buy ${amount} XPR on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
-                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, amount, protondexPrice, {
+                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, Number(amount.toFixed(4)), Number(protondexPrice.toFixed(6)), {
                     'account': process.env.PROTONDEX_ACCOUNT,
                     'filltype': 0,
                     'triggerprice': 0,
