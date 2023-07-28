@@ -1,8 +1,3 @@
-// Example script started by Paul Grey to arbitrage trade between ProtonDEX & KuCoin
-// ADD YOUR WEBAUTH PRIVATE KEY TO .ENV FILE ON PROTONDEX_API_SECRET
-// ADD YOUR KUCOIN KEY & SECRET TO .ENV FILE ON KUCOIN_API_KEY & KUCOIN_SECRET_KEY
-// In the current script, the arbitrage threshold is set to 1.0, which means the Kucoin price needs to be at least 1% higher than the ProtonDEX price for an arbitrage opportunity to be detected and a trade to be made.
-
 require('dotenv').config();
 const ccxt = require('ccxt-xpr');
 
@@ -18,7 +13,8 @@ async function fetchPrices() {
 
   const exchangeKucoin = new ccxt.kucoin({
     'apiKey': process.env.KUCOIN_API_KEY,
-    'secret': process.env.KUCOIN_SECRET_KEY,
+    'secret': process.env.KUCOIN_API_SECRET,
+    'password': process.env.KUCOIN_API_PASSWORD,
     'verbose': process.argv.includes('--verbose'),
     'timeout': 60000,
   });
@@ -39,23 +35,64 @@ async function fetchPrices() {
     console.log('Kucoin Price:', kucoinPrice);
 
     if (protondexPrice && kucoinPrice) {
-      const spreadPercentage = ((kucoinPrice - protondexPrice) / protondexPrice) * 100;
+      const spreadPercentage = Math.abs(((kucoinPrice - protondexPrice) / protondexPrice) * 100);
       console.log('Spread Percentage:', spreadPercentage.toFixed(2) + '%');
 
-      const arbitrageThreshold = 1;
+      const arbitrageThreshold = 0.3;
       if (spreadPercentage > arbitrageThreshold) {
         console.log('Arbitrage opportunity detected!');
-        const amount = 5;
+        const minOrderValue = 2; // Minimum order value in USDT
+        const maxPrice = Math.max(protondexPrice, kucoinPrice); // Use the higher price
+        const amount = minOrderValue / maxPrice; // Amount of XPR to buy or sell        
 
-        const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 'limit', 'buy', amount, protondexPrice, {
-          'account': 'trading.paul',
-          'filltype': 0,
-          'triggerprice': 0,
-        });
-        console.log('ProtonDEX Order placed successfully:', orderProtonDEX);
+        // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
+        // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
+        if (kucoinPrice > protondexPrice) {
+            try {
+                console.log(`Trying to buy ${amount} XPR on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
+                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, amount, protondexPrice, {
+                    'account': process.env.PROTONDEX_ACCOUNT,
+                    'filltype': 0,
+                    'triggerprice': 0,
+                });
+                console.log('ProtonDEX buy order placed:', orderProtonDEX);
+            } catch (error) {
+                console.error('Error placing ProtonDEX order:', error);
+            }
 
-        const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'sell', amount, kucoinPrice);
-        console.log('Kucoin Order placed successfully:', orderKucoin);
+            try {
+                const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'sell', amount, kucoinPrice);
+                console.log('Kucoin sell order placed:', orderKucoin);
+            } catch (error) {
+                console.error('Error placing Kucoin order:', error);
+            }
+        } 
+        // If ProtonDEX price is lower, buy on Kucoin and sell on ProtonDEX
+        else {
+            try {
+                console.log('Amount:', Number(amount.toFixed(4)));
+                console.log('Price:', Number(protondexPrice.toFixed(6)));
+                                
+                console.log(`Trying to buy ${amount} XPR on Kucoin at price ${kucoinPrice} and sell on ProtonDEX at price ${protondexPrice}`);
+                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 2, Number(amount.toFixed(4)), Number(protondexPrice.toFixed(6)), {
+                    'account': process.env.PROTONDEX_ACCOUNT,
+                    'filltype': 0,
+                    'triggerprice': 0,
+                });
+                console.log('ProtonDEX sell order placed:', orderProtonDEX);
+            } catch (error) {
+                console.error('Error placing ProtonDEX order:', error);
+            }
+
+            try {
+                const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'buy', amount, kucoinPrice);
+                console.log('Kucoin buy order placed:', orderKucoin);
+            } catch (error) {
+                console.error('Error placing Kucoin order:', error);
+            }
+        }
+  
+        
       } else {
         console.log('No arbitrage opportunity at the moment.');
       }
@@ -63,9 +100,13 @@ async function fetchPrices() {
       console.log('Unable to calculate spread percentage. Prices are missing.');
     }
   } catch (error) {
-    console.error('Error fetching prices or placing orders:', error.message);
+    if (error instanceof ccxt.DDoSProtection || error.message.includes('429')) {
+      console.log('Rate limit exceeded, waiting for 1 minute before retrying.');
+      setTimeout(fetchPrices, 60000);
+    } else {
+      console.error('Error fetching prices or placing orders:', error.message);
+    }
   }
 }
 
-// Call the function to fetch prices and execute the arbitrage strategy at 10-second intervals
 setInterval(fetchPrices, 30000);
