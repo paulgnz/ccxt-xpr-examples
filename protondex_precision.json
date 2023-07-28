@@ -1,0 +1,65 @@
+{
+    "markets": [
+      {
+        "market_id": 1,
+        "symbol": "XPR_XMD",
+        "bid_token": {
+          "code": "XPR",
+          "precision": 4
+        },
+        "ask_token": {
+          "code": "XMD",
+          "precision": 6
+        }
+      },
+      {
+        "market_id": 2,
+        "symbol": "XBTC_XMD",
+        "bid_token": {
+          "code": "XBTC",
+          "precision": 8
+        },
+        "ask_token": {
+          "code": "XMD",
+          "precision": 6
+        }
+      },
+      {
+        "market_id": 3,
+        "symbol": "XETH_XMD",
+        "bid_token": {
+          "code": "XETH",
+          "precision": 8
+        },
+        "ask_token": {
+          "code": "XMD",
+          "precision": 6
+        }
+      },
+      {
+        "market_id": 12,
+        "symbol": "XDOGE_XMD",
+        "bid_token": {
+          "code": "XDOGE",
+          "precision": 6
+        },
+        "ask_token": {
+          "code": "XMD",
+          "precision": 6
+        }
+      },
+      {
+        "market_id": 14,
+        "symbol": "XLTC_XMD",
+        "bid_token": {
+          "code": "XLTC",
+          "precision": 8
+        },
+        "ask_token": {
+          "code": "XMD",
+          "precision": 6
+        }
+      }
+    ]
+  }
+  
