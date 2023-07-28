@@ -62,8 +62,8 @@ async function fetchPrices() {
       const arbitrageThreshold = 0.4;
       if (spreadPercentage > arbitrageThreshold) {
         console.log('Arbitrage opportunity detected!');
-        const minOrderValue = 5; // Minimum order value in USDT
-
+        const minOrderValue = 2; // Minimum order value in USDT
+        const amount = Number((minOrderValue / protondexPrice).toFixed(2));
         const protonAmount = Number((minOrderValue).toFixed(2));
         const kucoinAmount = Number((minOrderValue / kucoinPrice).toFixed(2));
         const maxPrice = Math.max(protondexPrice, kucoinPrice); // Use the higher price
@@ -83,7 +83,7 @@ async function fetchPrices() {
         // Quote currencies
         const quoteTokenProtonDEX = symbolProtonDEX.split('_')[1]; // Quote token for ProtonDEX
         const quoteTokenKucoin = symbolKucoin.split('/')[1]; // Quote token for Kucoin
-
+        const neededBalance = minOrderValue; // You need at least this amount of quote currency to execute the trade
         console.log(`Available balance in ${baseTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[baseTokenProtonDEX]}`);
         console.log(`Available balance in ${baseTokenKucoin} on Kucoin: ${balanceKucoin.free[baseTokenKucoin]}`);
         console.log(`Available balance in ${quoteTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[quoteTokenProtonDEX]}`);
@@ -167,4 +167,4 @@ async function fetchPrices() {
   }
 }
 
-setInterval(fetchPrices, 30000);
+setInterval(fetchPrices, 15000);
