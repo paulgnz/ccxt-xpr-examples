@@ -1,10 +1,9 @@
 # ccxt-xpr-examples
 ![ccxt-xpr](https://pbs.twimg.com/media/F15fJHHaIAA-GCt?format=jpg&name=large)
 
-example scripts for protondex ccxt integration 
+Arbitrage trading bots and example scripts for protondex ccxt-xpr integration 
 
 Get the fork of ccxt for protondex here https://www.npmjs.com/package/ccxt-xpr
-
 
 # Trading Scripts using CCXT-XPR for Proton DEX
 
