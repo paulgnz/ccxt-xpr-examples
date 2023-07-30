@@ -2,10 +2,10 @@ require('dotenv').config();
 const ccxt = require('ccxt-xpr');
 
 // OPTIONS
-const symbol = 'XPR_XMD'; // Replace with the trading pair symbol you want to trade
+const symbol = 'XBTC_XMD'; // Replace with the trading pair symbol you want to trade (remember XBTC not BTC)
 let dollarAmount = 10; // Replace with the amount you want to buy or sell (in XMD / Dollars)
-const price = 0.000941; // Replace with the price at which you want to place the order
-const orderSide = 1; // Set the order side, 1 for buy and 2 for sell
+const price = 29550; // Replace with the price at which you want to place the order
+const orderSide = 2; // Set the order side, 1 for buy and 2 for sell
 
 // FUNCTIONS
 async function placeLimitBuyOrder() {
@@ -48,7 +48,7 @@ async function placeLimitBuyOrder() {
             'filltype': 0,
             'triggerprice': 0,
         });
-        
+
         console.log('Order placed successfully:');
         // print the log
         console.log(order);
