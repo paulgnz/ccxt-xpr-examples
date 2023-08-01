@@ -1,6 +1,7 @@
 require('dotenv').config();
 const ccxt = require('ccxt-xpr');
 const fs = require('fs');
+const TelegramBot = require('node-telegram-bot-api');
 
 let rawdata = fs.readFileSync('protondex_precision.json');
 let markets = JSON.parse(rawdata);
@@ -10,6 +11,10 @@ let markets = JSON.parse(rawdata);
 
 const symbolProtonDEX = 'XDOGE_XMD';
 const symbolKucoin = 'DOGE/USDT';
+
+// replace the values in env with your own 
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {polling: false});
+const chatId = process.env.TELEGRAM_CHAT_ID;
 
 async function fetchPrices() {
   const exchangeProtonDEX = new ccxt.protondex({
@@ -53,7 +58,7 @@ async function fetchPrices() {
       const arbitrageThreshold = 1;
       if (spreadPercentage > arbitrageThreshold) {
         console.log('Arbitrage opportunity detected!');
-        const minOrderValue = 4; // Minimum order value in USDT
+        const minOrderValue = 10; // Minimum order value in USDT
         const maxPrice = Math.max(protondexPrice, kucoinPrice); // Use the higher price
         const amount = Number((minOrderValue / maxPrice).toFixed(precisionProtonDEX)); // Amount in base currency (XPR)
         const kucoinBuyAmount = Number((minOrderValue / kucoinPrice).toFixed(precisionKucoin)); // Amount to buy on Kucoin
@@ -82,12 +87,14 @@ async function fetchPrices() {
         if (balanceProtonDEX.free[baseTokenProtonDEX] < amount || balanceKucoin.free[baseTokenKucoin] < kucoinBuyAmount ||
             balanceProtonDEX.free[quoteTokenProtonDEX] < neededBalance || balanceKucoin.free[quoteTokenKucoin] < neededBalance) {
             console.error('Insufficient balance!');
+            bot.sendMessage(chatId, `Insufficient balance!`);
             return;
         }
         
         // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
         if (kucoinPrice > protondexPrice) {
             try {
+                bot.sendMessage(chatId, `Trying to buy TOKEN worth ${minOrderValue} on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
                 console.log(`Trying to buy TOKEN worth ${minOrderValue} on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
                 const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, minOrderValue, protondexPrice, {
                     'account': process.env.PROTONDEX_ACCOUNT,
@@ -111,6 +118,7 @@ async function fetchPrices() {
         // If ProtonDEX price is lower, buy on Kucoin and sell on ProtonDEX
         else {
             try {
+                bot.sendMessage(chatId, `Trying to buy ${kucoinBuyAmount} TOKEN worth ${minOrderValue} on Kucoin at price ${kucoinPrice} and sell on ProtonDEX at price ${protondexPrice}`);
                 console.log(`Trying to buy ${kucoinBuyAmount} TOKEN worth ${minOrderValue} on Kucoin at price ${kucoinPrice} and sell on ProtonDEX at price ${protondexPrice}`);
                 const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 2, kucoinBuyAmount, protondexPrice, {
                     'account': process.env.PROTONDEX_ACCOUNT,
@@ -127,6 +135,7 @@ async function fetchPrices() {
             try {
                 const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'buy', kucoinBuyAmount, kucoinPrice);
                 console.log('Kucoin buy order placed:', orderKucoin);
+
             } catch (error) {
                 console.error('Error placing Kucoin order:', error);
             }
