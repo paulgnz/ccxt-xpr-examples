@@ -52,7 +52,7 @@ async function arbTrading() {
                 let amount = new BigNumber(dollarAmount / maxPrice).toFixed(12); // Amount in base currency
                 console.log('Amount ', amount);
 
-                const sufficientBalance = true;
+                let sufficientBalance = true;
                 
                 // If ProtonDEX price is lower, BUY on ProtonDEX and SELL on Kucoin
                 if (priceKucoin > priceProtonDEX) {
@@ -61,10 +61,6 @@ async function arbTrading() {
                     const action = (`Buy ${amountProtonDEX} ${quoteTokenProtonDEX} of ${baseTokenProtonDEX} on ProtonDEX at price ${priceProtonDEX} and sell ${amountKucoin} ${baseTokenKucoin} on Kucoin at price ${priceKucoin}`);
                     console.log(action);
                     
-                    if (enableTelegram) {
-                        bot.sendMessage(chatId, action);
-                    }
-
                     console.log(amountProtonDEX);               
                     console.log(amountKucoin);
             
@@ -76,13 +72,17 @@ async function arbTrading() {
                         balanceKucoin.free[baseTokenKucoin] < amountKucoin) {
                         console.error('Insufficient balance!');
                         sufficientBalance = false;
+                        if (enableTelegram) {bot.sendMessage(chatId, "Insufficient balance!");}
                         //console.log(sufficientBalance);
                         //process.exit(1);
                         // We can keep trying until we have sufficient balance in one direction
                     }
                     
                     // now buy and sell
+
                     if (!testMode && sufficientBalance) {
+                        if (enableTelegram) {bot.sendMessage(chatId, action);}
+
                         // Buy on ProtonDEX
                         try {
                             const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, amountProtonDEX, priceProtonDEX, {
@@ -115,7 +115,6 @@ async function arbTrading() {
                     const amountKucoin = Number((dollarAmount / priceKucoin).toFixed(8)); // Amount to buy on Kucoin
                     const action = (`Sell ${amountProtonDEX} ${baseTokenProtonDEX} worth ${dollarAmount.toFixed(precisionProtonDEXAsk)} ${quoteTokenProtonDEX} on ProtonDEX at price ${priceProtonDEX} and buy ${dollarAmount} ${quoteTokenKucoin} worth of ${baseTokenKucoin} on Kucoin at price ${priceKucoin}`);
                     console.log(action);
-                    if (enableTelegram) { bot.sendMessage(chatId, action);};
 
                     console.log(amountProtonDEX);               
                     console.log(amountKucoin);
@@ -130,11 +129,13 @@ async function arbTrading() {
                         console.error('Insufficient balance!');
                         sufficientBalance = false;
                         console.log(sufficientBalance);
+                        if (enableTelegram) {bot.sendMessage(chatId, "Insufficient balance!");}
                         //process.exit(1);
                         // We can keep trying until we have sufficient balance in one direction
                     }                    
 
                     if (!testMode && sufficientBalance) {
+                        if (enableTelegram) { bot.sendMessage(chatId, action);};
 
                         try {
                             const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 2, amountProtonDEX, priceProtonDEX, {
@@ -156,7 +157,7 @@ async function arbTrading() {
                             console.error('Error placing Kucoin order:', error);
                         }
                     } else {
-                        console.log('Test Mode enabled, no order placed. To place order change testMode to false.');
+                        console.log('Insufficient Balalance or Test Mode enabled, no order placed.');
                     }
                 }
 
