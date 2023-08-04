@@ -1,10 +1,11 @@
 //cjs
+require('dotenv').config();
 var ccxt = require ('ccxt-xpr')
-// console.log (ccxt.exchanges) // print all available exchanges
+console.log (ccxt.exchanges) // print all available exchanges
 ;(async () => {
     const exchange = new ccxt.protondex ({
-        'secret': 'privatekey',
-        'verbose': process.argv.includes ('--verbose'),
+        'secret': process.env.PROTONDEX_API_SECRET,
+        'verbose': true,
         'timeout': 60000,
     })
     try {
@@ -14,7 +15,7 @@ var ccxt = require ('ccxt-xpr')
         // 1. Fetch markets
         // const response = await exchange.fetchMarkets ()
         // 2. Fetch ticker
-         const response = await exchange.fetchTickers ()
+        // const response = await exchange.fetchTickers ()
         // const response = await exchange.fetchTicker ('XPR_XMD')
         // 3. Fetch order book
         // const response = await exchange.fetchOrderBook ('XPR_XMD', 100, {'step': 10000})
@@ -36,9 +37,9 @@ var ccxt = require ('ccxt-xpr')
         // 11. Create order
         // const response = await exchange.createOrder ('XPR_XMD', 1, 1, 1.100000, 0.0009, {'account': 'pbonblockc', 'filltype': 0, 'triggerprice': 0})
         // 12. Cancel order
-        // const response = await exchange.cancelOrder (5165922, 'XPR_XMD', {'account': 'pbonblockc'});
+        //const response = await exchange.cancelOrder (5380376, 'METAL_XMD', {'account': 'trading.paul'});
         // 13. Cancel all orders for specific symbol
-        // const response = await exchange.cancelAllOrders ('XPR_XMD', {'account': 'testme1'});
+        const response = await exchange.cancelAllOrders ('XBTC_XMD', {'account': 'trading.paul'});
         console.log (response);
         console.log ('Succeeded.')
     } catch (e) {
