@@ -1,152 +1,181 @@
 require('dotenv').config();
+
 const ccxt = require('ccxt-xpr');
-const fs = require('fs');
+const BigNumber = require('bignumber.js');
 
-let rawdata = fs.readFileSync('protondex_precision.json');
-let markets = JSON.parse(rawdata);
+const TelegramBot = require('node-telegram-bot-api');
+const fetchExchanges = require('./src/fetchExchanges.js');
+const fetchPricesAndPrecision = require('./src/fetchPrices.js');
+const fetchBalances = require('./src/fetchBalances.js');
+const exchangeSymbols = require('./src/exchangeSymbols.js');
 
-const symbolProtonDEX = 'XPR_XMD';
-const symbolKucoin = 'XPR/USDT';
 
-// const symbolProtonDEX = 'XDOGE_XMD';
-// const symbolKucoin = 'DOGE/USDT';
+const testMode = false; // if true, will only search for opportunties and won't actually execute trades
+const enableTelegram = true; // if true will send to telegram bot when arb trade happens
+const forceMode = true; // if true will keep trying in even if insufficient balance
 
-async function fetchPrices() {
-  const exchangeProtonDEX = new ccxt.protondex({
-    'secret': process.env.PROTONDEX_API_SECRET,
-    'verbose': false,
-    'timeout': 60000,
-  });
+const symbolProtonDEX = 'XLTC_XMD';
+const symbolKucoin = 'LTC/USDT';
 
-  const exchangeKucoin = new ccxt.kucoin({
-    'apiKey': process.env.KUCOIN_API_KEY,
-    'secret': process.env.KUCOIN_API_SECRET,
-    'password': process.env.KUCOIN_API_PASSWORD,
-    'verbose': process.argv.includes('--verbose'),
-    'timeout': 60000,
-  });
+const dollarAmount = 10; // Minimal amount in dollars at least $1.5
+const arbitrageThreshold = 0.5;
 
-  try {
-    const [protondexTicker, kucoinTicker] = await Promise.all([
-      exchangeProtonDEX.fetchTicker(symbolProtonDEX),
-      exchangeKucoin.fetchTicker(symbolKucoin),
-    ]);
+// replace the values in .env with your own 
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {polling: false});
+const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    const marketsKucoin = await exchangeKucoin.fetchMarkets();
+const symbols = exchangeSymbols(symbolProtonDEX, symbolKucoin);
+const { baseTokenProtonDEX, baseTokenKucoin, quoteTokenProtonDEX, quoteTokenKucoin } = symbols;
 
-    const marketProtonDEX = markets.markets.find(market => market.symbol === symbolProtonDEX);
-    const marketKucoin = marketsKucoin.find(market => market.symbol === symbolKucoin);
-    
-    const precisionProtonDEX = marketProtonDEX.ask_token.precision;
-    const precisionKucoin = marketKucoin.precision.price;
+async function arbTrading() {
+    const { exchangeProtonDEX, exchangeKucoin } = await fetchExchanges();
 
-    const protondexPrice = Number(protondexTicker.last.toFixed(precisionProtonDEX));
-    const kucoinPrice = Number(kucoinTicker.bid);
+    // Fetch prices and precision
+    const { priceProtonDEX, priceKucoin, precisionProtonDEXAsk, precisionProtonDEXBid, precisionKucoin } = 
+        await fetchPricesAndPrecision(exchangeProtonDEX, exchangeKucoin, symbolProtonDEX, symbolKucoin, baseTokenProtonDEX, baseTokenKucoin, quoteTokenProtonDEX, quoteTokenKucoin);
 
-    console.log('ProtonDEX Price:', protondexPrice);
-    console.log('Kucoin Price:', kucoinPrice);
+    // Fetch balances
+    const { balanceProtonDEX, balanceKucoin } =
+        await fetchBalances({exchangeProtonDEX, exchangeKucoin, priceProtonDEX, priceKucoin, ...symbols});
 
-    if (protondexPrice && kucoinPrice) {
-      const spreadPercentage = Math.abs(((kucoinPrice - protondexPrice) / protondexPrice) * 100);
-      console.log('Spread Percentage:', spreadPercentage.toFixed(2) + '%');
+    try {
+        console.log('ProtonDEX Price:', priceProtonDEX);
+        console.log('Kucoin Price:', priceKucoin);
 
-      const arbitrageThreshold = 1;
-      if (spreadPercentage > arbitrageThreshold) {
-        console.log('Arbitrage opportunity detected!');
-        const minOrderValue = 10; // Minimum order value in USDT
-        const maxPrice = Math.max(protondexPrice, kucoinPrice); // Use the higher price
-        const amount = Number((minOrderValue / maxPrice).toFixed(4)); // Amount in base currency (XPR)
-        const buyAmount = minOrderValue; // Amount in quote currency (XMD or USDT) for a buy order
-        console.log('protonAmount:', `${buyAmount}`);
-        console.log(`kucoinAmount:`, `${amount}`);
-        
-        // Fetch balances
-        const [balanceProtonDEX, balanceKucoin] = await Promise.all([
-          exchangeProtonDEX.fetchBalance({account: process.env.PROTONDEX_ACCOUNT}),
-          exchangeKucoin.fetchBalance(),
-        ]);
-        
-        // Check if the balances are sufficient
-        const baseTokenProtonDEX = symbolProtonDEX.split('_')[0]; // Token for ProtonDEX
-        const baseTokenKucoin = symbolKucoin.split('/')[0]; // Token for Kucoin
+        if (priceProtonDEX && priceKucoin) {
+            const spreadPercentage = Math.abs(((priceKucoin - priceProtonDEX) / priceProtonDEX) * 100);
+            console.log('Spread Percentage:', spreadPercentage.toFixed(2) + '%');
 
-        // Quote currencies
-        const quoteTokenProtonDEX = symbolProtonDEX.split('_')[1]; // Quote token for ProtonDEX
-        const quoteTokenKucoin = symbolKucoin.split('/')[1]; // Quote token for Kucoin
-        const neededBalance = minOrderValue; // You need at least this amount of quote currency to execute the trade
-        console.log(`Available balance in ${baseTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[baseTokenProtonDEX]}`);
-        console.log(`Available balance in ${baseTokenKucoin} on Kucoin: ${balanceKucoin.free[baseTokenKucoin]}`);
-        console.log(`Available balance in ${quoteTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[quoteTokenProtonDEX]}`);
-        console.log(`Available balance in ${quoteTokenKucoin} on Kucoin: ${balanceKucoin.free[quoteTokenKucoin]}`);
+            if (spreadPercentage > arbitrageThreshold) {
+                console.log('Arbitrage opportunity detected!');
+                const maxPrice = Math.max(priceProtonDEX, priceKucoin); // Use the higher price
+                let amount = new BigNumber(dollarAmount / maxPrice).toFixed(12); // Amount in base currency
+                console.log('Amount ', amount);
 
-        if (balanceProtonDEX.free[baseTokenProtonDEX] < amount || balanceKucoin.free[baseTokenKucoin] < amount ||
-            balanceProtonDEX.free[quoteTokenProtonDEX] < neededBalance || balanceKucoin.free[quoteTokenKucoin] < neededBalance) {
-            console.error('Insufficient balance!');
-            return;
+                const sufficientBalance = true;
+                
+                // If ProtonDEX price is lower, BUY on ProtonDEX and SELL on Kucoin
+                if (priceKucoin > priceProtonDEX) {
+                    const amountProtonDEX = Number(new BigNumber(dollarAmount).toFixed(precisionProtonDEXAsk));
+                    const amountKucoin = amount.toFixed(precisionKucoin);                        
+                    const action = (`Buy ${amountProtonDEX} ${quoteTokenProtonDEX} of ${baseTokenProtonDEX} on ProtonDEX at price ${priceProtonDEX} and sell ${amountKucoin} ${baseTokenKucoin} on Kucoin at price ${priceKucoin}`);
+                    console.log(action);
+                    
+                    if (enableTelegram) {
+                        bot.sendMessage(chatId, action);
+                    }
+
+                    console.log(amountProtonDEX);               
+                    console.log(amountKucoin);
+            
+                    console.log(precisionProtonDEXAsk);
+                    console.log(precisionProtonDEXBid);
+                    console.log(precisionKucoin);
+
+                    if (balanceProtonDEX.free[quoteTokenProtonDEX] < dollarAmount ||
+                        balanceKucoin.free[baseTokenKucoin] < amountKucoin) {
+                        console.error('Insufficient balance!');
+                        sufficientBalance = false;
+                        //console.log(sufficientBalance);
+                        //process.exit(1);
+                        // We can keep trying until we have sufficient balance in one direction
+                    }
+                    
+                    // now buy and sell
+                    if (!testMode && sufficientBalance) {
+                        // Buy on ProtonDEX
+                        try {
+                            const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, amountProtonDEX, priceProtonDEX, {
+                                'account': process.env.PROTONDEX_ACCOUNT_2,
+                                'filltype': 0,
+                                'triggerprice': 0,
+                            });
+
+                            console.log('ProtonDEX buy order placed:', orderProtonDEX);
+                        } catch (error) {
+                            console.error('Error placing ProtonDEX order:', error);
+                        }
+
+                        // Sell on Kucoin
+                        try {
+                            const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'sell', amountKucoin, priceKucoin);
+                            console.log('Kucoin sell order placed:', orderKucoin);
+                        } catch (error) {
+                            console.error('Error placing Kucoin order:', error);
+                        }
+
+                    } else {
+                        console.log('Insufficient Balalance or Test Mode enabled, no order placed.');
+                    }
+                }
+                // If ProtonDEX price is higher, SELL on ProtonDEX and BUY on Kucoin
+                else {
+                    // Sell on ProtonDEX
+                    const amountProtonDEX = Number(new BigNumber(dollarAmount / priceProtonDEX).toFixed(precisionProtonDEXBid)); // Amount to sell on ProtonDEX
+                    const amountKucoin = Number((dollarAmount / priceKucoin).toFixed(8)); // Amount to buy on Kucoin
+                    const action = (`Sell ${amountProtonDEX} ${baseTokenProtonDEX} worth ${dollarAmount.toFixed(precisionProtonDEXAsk)} ${quoteTokenProtonDEX} on ProtonDEX at price ${priceProtonDEX} and buy ${dollarAmount} ${quoteTokenKucoin} worth of ${baseTokenKucoin} on Kucoin at price ${priceKucoin}`);
+                    console.log(action);
+                    if (enableTelegram) { bot.sendMessage(chatId, action);};
+
+                    console.log(amountProtonDEX);               
+                    console.log(amountKucoin);
+            
+                    console.log(precisionProtonDEXAsk);
+                    console.log(precisionProtonDEXBid);
+                    console.log(precisionKucoin);
+
+
+                    if (balanceProtonDEX.free[baseTokenProtonDEX] < amountProtonDEX ||
+                        balanceKucoin.free[quoteTokenKucoin] < dollarAmount) {
+                        console.error('Insufficient balance!');
+                        sufficientBalance = false;
+                        console.log(sufficientBalance);
+                        //process.exit(1);
+                        // We can keep trying until we have sufficient balance in one direction
+                    }                    
+
+                    if (!testMode && sufficientBalance) {
+
+                        try {
+                            const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 2, amountProtonDEX, priceProtonDEX, {
+                                'account': process.env.PROTONDEX_ACCOUNT_2,
+                                'filltype': 0,
+                                'triggerprice': 0,
+                            });
+
+                            console.log('ProtonDEX sell order placed:', orderProtonDEX);
+                        } catch (error) {
+                            console.error('Error placing ProtonDEX order:', error);
+                        }
+
+                        // Buy on Kucoin
+                        try {
+                            const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'buy', amountKucoin, priceKucoin);
+                            console.log('Kucoin buy order placed:', orderKucoin);
+                        } catch (error) {
+                            console.error('Error placing Kucoin order:', error);
+                        }
+                    } else {
+                        console.log('Test Mode enabled, no order placed. To place order change testMode to false.');
+                    }
+                }
+
+            } else {
+                console.log('No arbitrage opportunity at the moment.');
+            }
+        } else {
+            console.log('Unable to calculate spread percentage. Prices are missing.');
         }
-        
-        //
-        // If Kucoin price is higher, buy on ProtonDEX and sell on Kucoin
-        if (kucoinPrice > protondexPrice) {
-            try {
-                console.log(`Trying to buy TOKEN worth ${buyAmount} on ProtonDEX at price ${protondexPrice} and sell on Kucoin at price ${kucoinPrice}`);
-                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 1, buyAmount, protondexPrice, {
-                    'account': process.env.PROTONDEX_ACCOUNT,
-                    'filltype': 0,
-                    'triggerprice': 0,
-                });
-                console.log(`${symbolProtonDEX} ${buyAmount} ${protondexPrice}`);
-
-                console.log('ProtonDEX buy order placed:', orderProtonDEX);
-            } catch (error) {
-                console.error('Error placing ProtonDEX order:', error);
-            }
-
-            try {
-                const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'sell', amount, kucoinPrice);
-                console.log('Kucoin sell order placed:', orderKucoin);
-            } catch (error) {
-                console.error('Error placing Kucoin order:', error);
-            }
-        } 
-        // If ProtonDEX price is lower, buy on Kucoin and sell on ProtonDEX
-        else {
-            try {                               
-                const amount = Number((minOrderValue / maxPrice).toFixed(2));
-                console.log(`Trying to buy TOKEN worth ${buyAmount} on Kucoin at price ${kucoinPrice} and sell on ProtonDEX at price ${protondexPrice}`);
-                const orderProtonDEX = await exchangeProtonDEX.createOrder(symbolProtonDEX, 1, 2, amount, protondexPrice, {
-                    'account': process.env.PROTONDEX_ACCOUNT,
-                    'filltype': 0,
-                    'triggerprice': 0,
-                });
-                console.log(`${symbolProtonDEX} ${amount} ${protondexPrice}`);
-
-                console.log('ProtonDEX sell order placed:', orderProtonDEX);
-            } catch (error) {
-                console.error('Error placing ProtonDEX order:', error);
-            }
-
-            try {
-                const orderKucoin = await exchangeKucoin.createOrder(symbolKucoin, 'limit', 'buy', buyAmount, kucoinPrice);
-                console.log('Kucoin buy order placed:', orderKucoin);
-            } catch (error) {
-                console.error('Error placing Kucoin order:', error);
-            }
+    } catch (error) {
+        if (error instanceof ccxt.DDoSProtection || error.message.includes('429')) {
+            console.log('Rate limit exceeded, waiting for 1 minute before retrying.');
+            setTimeout(fetchPricesAndPrecision, 60000, exchangeProtonDEX, exchangeKucoin, symbolProtonDEX, symbolKucoin);
+        } else {
+            console.error('Error fetching prices or placing orders:', error.message);
+            process.exit(1);
         }
-      } else {
-        console.log('No arbitrage opportunity at the moment.');
-      }
-    } else {
-      console.log('Unable to calculate spread percentage. Prices are missing.');
     }
-  } catch (error) {
-    if (error instanceof ccxt.DDoSProtection || error.message.includes('429')) {
-      console.log('Rate limit exceeded, waiting for 1 minute before retrying.');
-      setTimeout(fetchPrices, 60000);
-    } else {
-      console.error('Error fetching prices or placing orders:', error.message);
-    }
-  }
 }
 
-setInterval(fetchPrices, 15000);
+setInterval(arbTrading, 60000);
+
