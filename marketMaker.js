@@ -4,7 +4,7 @@ const ccxt = require('ccxt-xpr');
 const BigNumber = require('bignumber.js');
 
 const symbolProtonDEX = 'XPR_XMD';
-const dollarAmount = 10; // Minimal amount in dollars at least $1.5
+const dollarAmount = 20; // Minimal amount in dollars at least $1.5
 
 const exchangeProtonDEX = new ccxt.protondex({
     'secret': process.env.PROTONDEX_API_SECRET,
@@ -54,9 +54,9 @@ async function marketMaking() {
     const incrementPercentage = new BigNumber(0.0025); // 1 percent
 
     // buy
-    let buyPrice = new BigNumber(price).times(0.995);;
+    let buyPrice = Number(new BigNumber(price).times(0.995)).toFixed(precisionProtonDEXAsk); // 0.5% less than the current ask price
     console.log('buyPrice', buyPrice.toString());
-    let buyAmount = dollarAmount; // Amount in base currency
+    let buyAmount = Number(new BigNumber(dollarAmount).toFixed(precisionProtonDEXAsk)); // Amount in base currency
     console.log('buyAmount', buyAmount);
 
     try {
