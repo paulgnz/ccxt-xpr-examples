@@ -1,17 +1,19 @@
 require('dotenv').config();
 const ccxt = require('ccxt-xpr');
+const BigNumber = require('bignumber.js');
+
 
 // OPTIONS
-const symbol = 'XPR_XMD'; // Replace with the trading pair symbol you want to trade (remember XBTC not BTC)
+const symbol = 'XBTC_XMD'; // Replace with the trading pair symbol you want to trade (remember XBTC not BTC)
 let dollarAmount = 5; // Replace with the amount you want to buy or sell (in XMD / Dollars)
-const price = 0.00092815; // Replace with the price at which you want to place the order
-const orderSide = 1; // Set the order side, 1 for buy and 2 for sell
+const price = 29800; // Replace with the price at which you want to place the order
+const orderSide = 2; // Set the order side, 1 for buy and 2 for sell
 
 // FUNCTIONS
 async function placeLimitBuyOrder() {
     const exchange = new ccxt.protondex({
-        'secret': process.env.PROTONDEX_API_SECRET,
-        'verbose': false,
+        'secret': process.env.PROTONDEX_API_SECRET_2,
+        'verbose': true,
         'timeout': 60000,
     });
 
@@ -23,9 +25,9 @@ async function placeLimitBuyOrder() {
     // set precision depending on the order side buy or sell
     let symbolPrecision;
     if (orderSide === 1) {
-        symbolPrecision = market.info.ask_token.precision;
-    } else if (orderSide === 2) {
-        symbolPrecision = market.info.bid_token.precision;
+        symbolPrecision = Number(market.info.ask_token.precision);
+    } else {
+        symbolPrecision = Number(market.info.bid_token.precision);
     }
     console.log('SymbolPrecision:', symbolPrecision);
 
@@ -34,7 +36,7 @@ async function placeLimitBuyOrder() {
     if (orderSide === 1) {
         protondexAmount = dollarAmount;
     } else if (orderSide === 2) {
-        protondexAmount = Number((dollarAmount / price).toFixed(symbolPrecision));
+        protondexAmount = Number(new BigNumber(dollarAmount / price).toFixed(symbolPrecision));
     }
 
     console.log('Amount of', symbol,'placed:', protondexAmount);
@@ -43,8 +45,8 @@ async function placeLimitBuyOrder() {
     // Load markets and fetch the symbol info
         await exchange.loadMarkets();
 
-        const order = await exchange.createOrder(symbol, 1, orderSide, dollarAmount, price, {
-            'account': process.env.PROTONDEX_ACCOUNT,
+        const order = await exchange.createOrder(symbol, 1, orderSide, protondexAmount, price.toString(), {
+            'account': process.env.PROTONDEX_ACCOUNT_2,
             'filltype': 0,
             'triggerprice': 0,
         });
