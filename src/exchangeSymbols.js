@@ -1,23 +1,35 @@
-function exchangeSymbols(symbolProtonDEX, symbolKucoin) {
+function exchangeSymbols(symbolProtonDEX, symbolExchange, exchangeName) {
     // Base and quote currencies for ProtonDEX
     const baseTokenProtonDEX = symbolProtonDEX.split('_')[0];
     const quoteTokenProtonDEX = symbolProtonDEX.split('_')[1];
 
-    let baseTokenKucoin, quoteTokenKucoin;
+    let baseTokenExchange, quoteTokenExchange;
 
-    // Base and quote currencies for Kucoin (if provided)
-    if (symbolKucoin) {
-        baseTokenKucoin = symbolKucoin.split('/')[0];
-        quoteTokenKucoin = symbolKucoin.split('/')[1];
+    // Base and quote currencies for other exchange (if provided)
+    if (symbolExchange) {
+        switch(exchangeName) {
+            case 'Kucoin':
+                baseTokenExchange = symbolExchange.split('/')[0];
+                quoteTokenExchange = symbolExchange.split('/')[1];
+                break;
+            case 'Gateio':
+                // Assuming Gate.io uses the same format as Kucoin
+                baseTokenExchange = symbolExchange.split('/')[0];
+                quoteTokenExchange = symbolExchange.split('/')[1];
+                break;
+            // Add more cases for other exchanges as needed
+            default:
+                console.log(`Exchange ${exchangeName} not recognized`);
+        }
     }
 
     return {
         baseTokenProtonDEX,
-        baseTokenKucoin,
+        baseTokenExchange,
         quoteTokenProtonDEX,
-        quoteTokenKucoin,
+        quoteTokenExchange,
         symbolProtonDEX,
-        symbolKucoin
+        symbolExchange
     };
 }
 
