@@ -1,22 +1,23 @@
 // fetchBalances.js
 const ccxt = require('ccxt-xpr');
 
-async function fetchBalances({exchangeProtonDEX, exchangeKucoin, baseTokenProtonDEX, baseTokenKucoin, quoteTokenProtonDEX, quoteTokenKucoin}) {
+async function fetchBalances({exchangeProtonDEX, exchange, baseTokenProtonDEX, baseTokenExchange, quoteTokenProtonDEX, quoteTokenExchange, exchangeName}) {
     
     // Fetch balances
-    const [balanceProtonDEX, balanceKucoin] = await Promise.all([
+    const [balanceProtonDEX, balanceExchange] = await Promise.all([
         exchangeProtonDEX.fetchBalance({account: process.env.PROTONDEX_ACCOUNT_2}),
-        exchangeKucoin.fetchBalance(),
-        ]);
+        exchange.fetchBalance(),
+    ]);
                 
-        console.log(`Available balance in ${baseTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[baseTokenProtonDEX]}`);
-        console.log(`Available balance in ${baseTokenKucoin} on Kucoin: ${balanceKucoin.free[baseTokenKucoin]}`);
-        console.log(`Available balance in ${quoteTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[quoteTokenProtonDEX]}`);
-        console.log(`Available balance in ${quoteTokenKucoin} on Kucoin: ${balanceKucoin.free[quoteTokenKucoin]}`);
+    console.log(`Available balance in ${baseTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[baseTokenProtonDEX]}`);
+    console.log(`Available balance in ${quoteTokenProtonDEX} on ProtonDEX: ${balanceProtonDEX.free[quoteTokenProtonDEX]}`);
+
+    console.log(`Available balance in ${baseTokenExchange} on ${exchangeName}: ${balanceExchange.free[baseTokenExchange]}`);
+    console.log(`Available balance in ${quoteTokenExchange} on ${exchangeName}: ${balanceExchange.free[quoteTokenExchange]}`);
 
     return {
         balanceProtonDEX,
-        balanceKucoin
+        balanceExchange
     };
 }
 
