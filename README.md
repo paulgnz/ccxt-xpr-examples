@@ -21,9 +21,11 @@ npm install ccxt-xpr
 
 ## Running the Scripts
 
-To run the scripts, you will need to replace placeholder values in the scripts with your own data. For example, you will need to replace 'PVT_K1_' and 'trading.paul' with your actual XPR Private key and account name in the createOrder.js script. You also need to replace the symbol, amount, and price variables with the actual values you want to use in each script.
+To run the scripts, you will need to replace placeholder values in the scripts with your own data. For example, you will need to replace 'PVT_K1_' and 'trading.paul' with your actual XPR Private key and account name in the .env.example file. Once you have entered your values save the file as .env (remove the .example)
 
-Take a look at the .env file, most scripts moving forward will use this to store your api keys, don't upload it to github or share it!
+You also need to replace the symbol, amount, and price variables with the actual values you want to use in each script.
+
+Take a look at the .env.example file, most scripts moving forward will use this to store your api keys. Once you've renamed it to .env don't upload it to github or share it!
 
 ```code
 PROTONDEX_ACCOUNT=xpraccount
