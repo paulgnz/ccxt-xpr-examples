@@ -13,19 +13,19 @@ const exchangeSymbols = require('./src/exchangeSymbols.js');
 const testMode = false; // if true, will only search for opportunties and won't actually execute trades
 const enableTelegram = true; // if true will send to telegram bot when arb trade happens
 const forceMode = true; // if true will keep trying in even if insufficient balance
-const exchangeName = 'Gateio'; // the name of the exchange, can use 'Kucoin' instead
+const exchangeName = 'Kucoin'; // the name of the exchange, can use 'Kucoin' instead
 
 // const symbolProtonDEX = 'XLTC_XMD';
 // const symbolExchange = 'LTC/USDT';
 
 const tradingPairs = [
-    { symbolProtonDEX: 'METAL_XMD', symbolExchange: 'METAL/USDT' },
+    { symbolProtonDEX: 'XLTC_XMD', symbolExchange: 'LTC/USDT' },
     { symbolProtonDEX: 'XDOGE_XMD', symbolExchange: 'DOGE/USDT' },
 ];
 
 
 const dollarAmount = 10; // Minimal amount in dollars at least $1.5
-const arbitrageThreshold = 0.5;
+const arbitrageThreshold = 3;
 
 
 // replace the values in .env with your own 
@@ -67,8 +67,10 @@ async function arbTrading(symbolProtonDEX, symbolExchange, exchangeName) {
                 
                 // If ProtonDEX price is lower, BUY on ProtonDEX and SELL on Exchange
                 if (priceExchange > priceProtonDEX) {
+                    const decimalPlaces = (precisionExchange.toString().split('.')[1] || []).length;
+
                     const amountProtonDEX = Number(new BigNumber(dollarAmount).toFixed(precisionProtonDEXAsk));
-                    const amountExchange = amount.toFixed(precisionExchange);                        
+                    const amountExchange = Number(amount.toFixed(decimalPlaces));
                     const action = (`Buy ${amountProtonDEX} ${quoteTokenProtonDEX} of ${baseTokenProtonDEX} on ProtonDEX at price ${priceProtonDEX} and sell ${amountExchange} ${baseTokenExchange} on ${exchangeName} at price ${priceExchange}`);
                     console.log(action);
 
