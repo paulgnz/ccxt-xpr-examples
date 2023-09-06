@@ -4,7 +4,7 @@ const ccxt = require('ccxt-xpr');
 const BigNumber = require('bignumber.js');
 
 const symbolProtonDEX = 'XPR_XMD';
-const dollarAmount = 20; // Minimal amount in dollars at least $1.5
+const dollarAmount = 42; // Minimal amount in dollars at least $1.5
 
 const exchangeProtonDEX = new ccxt.protondex({
     'secret': process.env.PROTONDEX_API_SECRET,
@@ -60,7 +60,7 @@ async function marketMaking() {
     console.log('buyAmount', buyAmount);
 
     try {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
             let adjustedBuyPrice = new BigNumber(buyPrice).times(new BigNumber(1).minus(incrementPercentage.times(i)));
             adjustedBuyPrice = adjustedBuyPrice.toFixed(precisionProtonDEXAsk);
     
@@ -90,7 +90,7 @@ async function marketMaking() {
     
 
     try {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
             let adjustedSellPrice = new BigNumber(sellPrice.times(BigNumber(1).plus(incrementPercentage.times(i))));
 
             adjustedSellPrice = adjustedSellPrice.toFixed(precisionProtonDEXAsk);
@@ -113,6 +113,6 @@ async function marketMaking() {
 
 }
 marketMaking();
-setInterval(marketMaking, 1200000); // Run the marketMaking function every minute
-console.log(`Wait for 20 minutes`);
+setInterval(marketMaking, 2400000); // Run the marketMaking function every minute
+console.log(`Wait for 40 minutes`);
 //marketMaking();
